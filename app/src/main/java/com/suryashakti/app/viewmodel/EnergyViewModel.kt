@@ -7,17 +7,47 @@ import com.suryashakti.app.data.local.EnergyLog
 import com.suryashakti.app.data.repository.EnergyRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
+data class SavingsReport(
+    val totalGeneration: Double = 0.0,
+    val totalConsumption: Double = 0.0,
+    val totalSavings: Double = 0.0, // Assuming a rate per kWh
+    val avgIndependence: Int = 0,
+    val daysCount: Int = 0
+)
+
 class EnergyViewModel(private val repository: EnergyRepository) : ViewModel() {
+
+    private val electricityRate = 0.15 // $0.15 per kWh as a default
 
     val allLogs: StateFlow<List<EnergyLog>> = repository.allLogs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val latestLog: StateFlow<EnergyLog?> = repository.latestLog
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val last30DaysReport: StateFlow<SavingsReport> = allLogs.map { logs ->
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        val filteredLogs = logs.filter { it.date >= thirtyDaysAgo }
+        
+        if (filteredLogs.isEmpty()) return@map SavingsReport()
+
+        val totalGen = filteredLogs.sumOf { it.generation }
+        val totalCons = filteredLogs.sumOf { it.consumption }
+        val avgInd = filteredLogs.map { calculateIndependenceScore(it.generation, it.consumption) }.average().toInt()
+        
+        SavingsReport(
+            totalGeneration = totalGen,
+            totalConsumption = totalCons,
+            totalSavings = totalGen * electricityRate,
+            avgIndependence = avgInd,
+            daysCount = filteredLogs.size
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SavingsReport())
 
     fun addLog(generation: Double, consumption: Double, batteryLevel: Int, weather: String) {
         viewModelScope.launch {

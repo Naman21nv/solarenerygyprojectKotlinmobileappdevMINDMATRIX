@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suryashakti.app.data.local.EnergyLog
 import com.suryashakti.app.viewmodel.EnergyViewModel
+import com.suryashakti.app.viewmodel.SavingsReport
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,6 +21,7 @@ import java.util.*
 fun DashboardScreen(viewModel: EnergyViewModel) {
     val allLogs by viewModel.allLogs.collectAsState()
     val latestLog by viewModel.latestLog.collectAsState()
+    val savingsReport by viewModel.last30DaysReport.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
 
@@ -52,6 +54,12 @@ fun DashboardScreen(viewModel: EnergyViewModel) {
             item {
                 EnergySummaryCard(latestLog, viewModel)
             }
+
+            if (savingsReport.daysCount > 0) {
+                item {
+                    SavingsReportCard(savingsReport)
+                }
+            }
             
             item {
                 Text("Recent Activity", style = MaterialTheme.typography.titleLarge)
@@ -75,6 +83,50 @@ fun DashboardScreen(viewModel: EnergyViewModel) {
 }
 
 @Composable
+fun SavingsReportCard(report: SavingsReport) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "30-Day Savings Report",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text("Total Saved", style = MaterialTheme.typography.labelSmall)
+                    Text("$${"%.2f".format(report.totalSavings)}", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Avg Independence", style = MaterialTheme.typography.labelSmall)
+                    Text("${report.avgIndependence}%", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+            
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                StatItemSmall("Total Gen", "${"%.1f".format(report.totalGeneration)} kWh")
+                StatItemSmall("Total Cons", "${"%.1f".format(report.totalConsumption)} kWh")
+                StatItemSmall("Days", "${report.daysCount}")
+            }
+        }
+    }
+}
+
+@Composable
+fun StatItemSmall(label: String, value: String) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall)
+        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 fun EnergySummaryCard(log: EnergyLog?, viewModel: EnergyViewModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -92,7 +144,7 @@ fun EnergySummaryCard(log: EnergyLog?, viewModel: EnergyViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Independence Score", style = MaterialTheme.typography.labelSmall)
+                    Text("Today's Independence Score", style = MaterialTheme.typography.labelSmall)
                     Text("$score%", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
                 }
                 CircularProgressIndicator(
