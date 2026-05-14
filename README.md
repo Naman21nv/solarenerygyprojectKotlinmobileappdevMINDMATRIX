@@ -27,10 +27,6 @@ Surya-Shakti is a modern Android application designed to help users track and op
 - `viewmodel/`: Business logic and UI state management (`EnergyViewModel`).
 - `data/`: Data layer containing Room database, DAOs, and the Repository pattern.
 
-## 📸 Screenshots
-
-*(Add screenshots here once available)*
-
 ## 🛠️ Setup & Installation
 
 1. Clone the repository.
